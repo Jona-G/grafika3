@@ -32,510 +32,784 @@
 // negativ elojellel szamoljak el es ezzel parhuzamosan eljaras is indul velem szemben.
 //=============================================================================================
 
-//A feladatot a Minimál CPU sugárkövetõ példaprogramból kezdtem el megoldani.
-//https://edu.vik.bme.hu/mod/url/view.php?id=97492
-
 #include "framework.h"
 
-const char* vertexSource = R"(
-	#version 330
-    precision highp float;
+inline float PMRND() { return 2.0f * rand() / RAND_MAX - 1.0f; }
+inline float Rand(float mean, float var) { return mean + PMRND() * var; }
 
-	layout(location = 0) in vec2 cVertexPosition;
-	out vec2 texcoord;
+//---------------------------
+struct Material {
+	//---------------------------
+	vec3 kd, ks, ka;
+	float shininess, emission;
 
-	void main() {
-		texcoord = (cVertexPosition + vec2(1, 1))/2;
-		gl_Position = vec4(cVertexPosition.x, cVertexPosition.y, 0, 1);
-	}
-)";
-
-const char* fragmentSource = R"(
-	#version 330
-    precision highp float;
-
-	uniform sampler2D textureUnit;
-	in  vec2 texcoord;
-	out vec4 fragmentColor;
-
-	void main() {
-		fragmentColor = texture(textureUnit, texcoord); 
-	}
-)";
-
-const float epsilon = 0.0001f;
-GPUProgram gpuProgram;
-
-struct Hit {
-	float t;
-	vec3 position, normal;
-	Hit() { t = -1; }
+	Material() { ka = vec3(1, 1, 1), kd = ks = vec3(0, 0, 0); shininess = 1; emission = 0; }
 };
 
-struct Ray {
-	vec3 start, dir;
-	Ray(vec3 _start, vec3 _dir) : start(_start), dir(normalize(_dir)) {}
-};
-
-struct Intersectable {
-	virtual Hit intersect(const Ray& ray) = 0;
-};
-
-struct Triangle : public Intersectable {
-	vec3 r1, r2, r3, n;
-
-	Triangle(const vec3& _r1, const vec3& _r2, const vec3& _r3)
-		:r1(_r1), r2(_r2), r3(_r3), n(normalize(cross(r2 - r1, r3 - r1))) {}
-
-	Hit intersect(const Ray& ray) {
-		Hit hit;
-		hit.t = dot(r1 - ray.start, n) / dot(ray.dir, n);
-		if (hit.t <= 0) return Hit();
-		hit.position = ray.start + ray.dir * hit.t;
-		hit.normal = n;
-		if ((dot(cross(r2-r1, hit.position-r1), n) > 0) &&
-		    (dot(cross(r3-r2, hit.position-r2), n) > 0) &&
-		    (dot(cross(r1-r3, hit.position-r3), n) > 0)) return hit;
-		return Hit();
-	}
-};
-
-struct Cone : public Intersectable {
-	vec3 p, n;
-	float h, alpha;
-
-	Cone(const vec3& _p, float _h, const vec3& _axis, float _alpha)
-		:p(_p), h(_h), alpha(_alpha * M_PI / 180.0f), n(normalize(_axis)) {}
-
-	Hit intersect(const Ray& ray) {
-		float a = dot(ray.dir, n) * dot(ray.dir, n) - dot(ray.dir, ray.dir) * cosf(alpha) * cosf(alpha);
-		float b = 2 * (dot(ray.dir, n) * dot(ray.start - p, n) - dot(ray.dir, ray.start - p) * cosf(alpha) * cosf(alpha));
-		float c = dot(ray.start - p, n) * dot(ray.start - p, n) - dot(ray.start - p, ray.start - p) * cosf(alpha) * cosf(alpha);
-		float discr = b * b - 4 * a * c;
-		if (discr < 0) return Hit();
-		float t1 = (-b - sqrtf(discr)) / (2 * a);
-		float t2 = (-b + sqrtf(discr)) / (2 * a);
-
-		float t;
-		if (t1 < 0 && t2 > 0) t = t2;
-		else if (t1 > 0 && t2 < 0) t = t1;
-		else t1 < t2 ? t = t1 : t = t2;
-		 
-		vec3 p1 = ray.start + t1 * ray.dir;
-		vec3 p2 = ray.start + t2 * ray.dir;
-		vec3 pos;
-		if (length(p - p2) > h && length(p - p1) < h) pos = p1;
-		else if (length(p - p2) < h && length(p - p1) > h) pos = p2;
-		else if (length(p - p2) < length(p - p1)) pos = p1;
-		else pos = p2;
-
-		if (dot(pos - p, n) < 0 || dot(pos - p, n) > h) return Hit();
-
-		Hit hit;
-		hit.t = t;
-		hit.position = pos;
-		hit.normal = normalize(dot(pos - p, n) * n - (pos - p) * cosf(alpha) * cosf(alpha));
-		return hit;
-	}
-};
-
-struct Cube {
-	std::vector<vec3> vtx;
-	vec3 center = vec3(0.0f, 0.0f, 0.0f);
-	float len = 1.0f;
-public:
-	Cube() { build(); }
-
-	Cube(vec3 _center, float _len)
-		:center(_center), len(_len) { build(); }
-
-	vec3 getCenter() { return center; }
-
-	void build() {
-		vtx.clear();
-
-		vtx.push_back(vec3(center.x - len/2, center.y - len/2, center.z - len/2));
-		vtx.push_back(vec3(center.x + len/2, center.y - len/2, center.z - len/2));
-		vtx.push_back(vec3(center.x - len/2, center.y - len/2, center.z + len/2));
-		vtx.push_back(vec3(center.x + len/2, center.y - len/2, center.z + len/2));
-		vtx.push_back(vec3(center.x - len/2, center.y + len/2, center.z - len/2));
-		vtx.push_back(vec3(center.x + len/2, center.y + len/2, center.z - len/2));
-		vtx.push_back(vec3(center.x - len/2, center.y + len/2, center.z + len/2));
-		vtx.push_back(vec3(center.x + len/2, center.y + len/2, center.z + len/2));
-	}
-
-	std::vector<Intersectable*> create(std::vector<Intersectable*> objects) {
-		objects.push_back(new Triangle(vtx[0], vtx[1], vtx[2]));
-		objects.push_back(new Triangle(vtx[0], vtx[1], vtx[5]));
-		objects.push_back(new Triangle(vtx[0], vtx[2], vtx[6]));
-		objects.push_back(new Triangle(vtx[0], vtx[4], vtx[5]));
-		objects.push_back(new Triangle(vtx[0], vtx[4], vtx[6]));
-		objects.push_back(new Triangle(vtx[1], vtx[2], vtx[3]));
-		objects.push_back(new Triangle(vtx[4], vtx[5], vtx[6]));
-		objects.push_back(new Triangle(vtx[5], vtx[6], vtx[7]));
-
-		return objects;
-	}
-
-	void moveTo(vec3 _center) {
-		vec3 oldCenter = center;
-		center = _center;
-		vec3 newCenter = oldCenter - center;
-
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x - newCenter.x, oldv.y - newCenter.y, oldv.z - newCenter.z);
-		}
-	}
-
-	void rotateX(float angle) {
-		angle = angle * (M_PI / 180.0f);
-		vec3 currentCenter = center;
-		moveTo(vec3(0.0f, 0.0f, 0.0f));
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x + currentCenter.x,
-					 oldv.y * cosf(angle) - oldv.z * sinf(angle) + currentCenter.y,
-					 oldv.z * cosf(angle) + oldv.y * sinf(angle) + currentCenter.z);
-		}
-	}
-
-	void rotateY(float angle) {
-		angle = angle * (M_PI / 180.0f);
-		vec3 currentCenter = center;
-		moveTo(vec3(0.0f, 0.0f, 0.0f));
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x * cosf(angle) - oldv.z * sinf(angle) + currentCenter.x,
-					 oldv.y + currentCenter.y,
-					 oldv.z * cosf(angle) + oldv.x * sinf(angle) + currentCenter.z);
-		}
-	}
-};
-
-//Forrás: https://people.sc.fsu.edu/~jburkardt/data/obj/obj.html
-struct Octahedron {
-	std::vector<vec3> vtx;
-	vec3 center = vec3(0.0f, 0.0f, 0.0f);
-	float scale = 0.2f;
-
-	Octahedron() { build(); }
-
-	Octahedron(vec3 _center, float _scale)
-		:center(_center), scale(_scale) { build(); }
-
-	void build() {
-		vtx.clear();
-
-		vtx.push_back(vec3(1, 0, 0));
-		vtx.push_back(vec3(0, -1, 0));
-		vtx.push_back(vec3(-1, 0, 0));
-		vtx.push_back(vec3(0, 1, 0));
-		vtx.push_back(vec3(0, 0, 1));
-		vtx.push_back(vec3(0, 0, -1));
-
-		for (auto& v : vtx) v = normalize(v) * scale + center;
-	}
-
-	std::vector<Intersectable*> create(std::vector<Intersectable*> objects) {
-		objects.push_back(new Triangle(vtx[1], vtx[0], vtx[4]));
-		objects.push_back(new Triangle(vtx[2], vtx[1], vtx[4]));
-		objects.push_back(new Triangle(vtx[3], vtx[2], vtx[4]));
-		objects.push_back(new Triangle(vtx[0], vtx[3], vtx[4]));
-		objects.push_back(new Triangle(vtx[0], vtx[1], vtx[5]));
-		objects.push_back(new Triangle(vtx[1], vtx[2], vtx[5]));
-		objects.push_back(new Triangle(vtx[2], vtx[3], vtx[5]));
-		objects.push_back(new Triangle(vtx[3], vtx[0], vtx[5]));
-		return objects;
-	}
-
-	void moveTo(vec3 _center) {
-		vec3 oldCenter = center;
-		center = _center;
-		vec3 newCenter = oldCenter - center;
-
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x - newCenter.x, oldv.y - newCenter.y, oldv.z - newCenter.z);
-		}
-	}
-
-	void rotateY(float angle) {
-		angle = angle * (M_PI / 180.0f);
-		vec3 currentCenter = center;
-		moveTo(vec3(0.0f, 0.0f, 0.0f));
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x * cosf(angle) - oldv.z * sinf(angle) + currentCenter.x,
-				oldv.y + currentCenter.y,
-				oldv.z * cosf(angle) + oldv.x * sinf(angle) + currentCenter.z);
-		}
-	}
-};
-
-//Forrás: https://people.sc.fsu.edu/~jburkardt/data/obj/obj.html
-struct Icosahedron {
-	std::vector<vec3> vtx;
-	vec3 center = vec3(0.0f, 0.0f, 0.0f);
-	float scale = 0.2f;
-
-	Icosahedron() { build(); }
-
-	Icosahedron(vec3 _center, float _scale)
-		:center(_center), scale(_scale) { build(); }
-
-	void build() {
-		vtx.clear();
-
-		vtx.push_back(vec3(0, -0.525731, 0.850651));
-		vtx.push_back(vec3(0.850651, 0, 0.525731));
-		vtx.push_back(vec3(0.850651, 0, -0.525731));
-		vtx.push_back(vec3(-0.850651, 0, -0.525731));
-		vtx.push_back(vec3(-0.850651, 0, 0.525731));
-		vtx.push_back(vec3(-0.525731, 0.850651, 0));
-		vtx.push_back(vec3(0.525731, 0.850651, 0));
-		vtx.push_back(vec3(0.525731, -0.850651, 0));
-		vtx.push_back(vec3(-0.525731, -0.850651, 0));
-		vtx.push_back(vec3(0, -0.525731, -0.850651));
-		vtx.push_back(vec3(0, 0.525731, -0.850651));
-		vtx.push_back(vec3(0, 0.525731, 0.850651));
-
-		for (auto& v : vtx) v = normalize(v) * scale + center;
-	}
-
-	std::vector<Intersectable*> create(std::vector<Intersectable*> objects) {
-		objects.push_back(new Triangle(vtx[1],  vtx[2],  vtx[6]) );
-		objects.push_back(new Triangle(vtx[1],  vtx[7],  vtx[2]) );
-		objects.push_back(new Triangle(vtx[3],  vtx[4],  vtx[5]) );
-		objects.push_back(new Triangle(vtx[4],  vtx[3],  vtx[8]) );
-		objects.push_back(new Triangle(vtx[6],  vtx[5],  vtx[11]));
-		objects.push_back(new Triangle(vtx[5],  vtx[6],  vtx[10]));
-		objects.push_back(new Triangle(vtx[9],  vtx[10], vtx[2]) );
-		objects.push_back(new Triangle(vtx[10], vtx[9],  vtx[3]) );
-		objects.push_back(new Triangle(vtx[7],  vtx[8],  vtx[9]) );
-		objects.push_back(new Triangle(vtx[8],  vtx[7],  vtx[0]) );
-		objects.push_back(new Triangle(vtx[11], vtx[0],  vtx[1]) );
-		objects.push_back(new Triangle(vtx[0],  vtx[11], vtx[4]) );
-		objects.push_back(new Triangle(vtx[6],  vtx[2],  vtx[10]));
-		objects.push_back(new Triangle(vtx[1],  vtx[6],  vtx[11]));
-		objects.push_back(new Triangle(vtx[3],  vtx[5],  vtx[10]));
-		objects.push_back(new Triangle(vtx[5],  vtx[4],  vtx[11]));
-		objects.push_back(new Triangle(vtx[2],  vtx[7],  vtx[9]) );
-		objects.push_back(new Triangle(vtx[7],  vtx[1],  vtx[0]) );
-		objects.push_back(new Triangle(vtx[3],  vtx[9],  vtx[8]) );
-		objects.push_back(new Triangle(vtx[4],  vtx[8],  vtx[0]) );
-		return objects;
-	}
-
-	void moveTo(vec3 _center) {
-		vec3 oldCenter = center;
-		center = _center;
-		vec3 newCenter = oldCenter - center;
-
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x - newCenter.x, oldv.y - newCenter.y, oldv.z - newCenter.z);
-		}
-	}
-
-	void rotateY(float angle) {
-		angle = angle * (M_PI / 180.0f);
-		vec3 currentCenter = center;
-		moveTo(vec3(0.0f, 0.0f, 0.0f));
-		for (auto& v : vtx) {
-			vec3 oldv = v;
-			v = vec3(oldv.x * cosf(angle) - oldv.z * sinf(angle) + currentCenter.x,
-				oldv.y + currentCenter.y,
-				oldv.z * cosf(angle) + oldv.x * sinf(angle) + currentCenter.z);
-		}
-	}
-};
-
-class Camera {
-	vec3 eye, lookat, right, up;
-public:
-	void set(vec3 _eye, vec3 _lookat, vec3 vup, float fov) {
-		eye = _eye;
-		lookat = _lookat;
-		vec3 w = eye - lookat;
-		float focus = length(w);
-		right = normalize(cross(vup, w)) * focus * tanf(fov / 2);
-		up = normalize(cross(w, right)) * focus * tanf(fov / 2);
-	}
-	Ray getRay(int X, int Y) {
-		vec3 dir = lookat + right * (2.0f * (X + 0.5f) / windowWidth - 1) + up * (2.0f * (Y + 0.5f) / windowHeight - 1) - eye;
-		return Ray(eye, dir);
-	}
-};
-
+//---------------------------
 struct Light {
-	vec3 position;
-	vec3 power;
-
-	Light(vec3 _position, vec3 _power) :position(_position), power(_power) {}
-
-	vec3 radianceAt(vec3 point) {
-		float distance2 = dot(position - point, position - point);
-		return power / (1.0f + distance2);
-	}
+	//---------------------------
+	vec3 La, Le;
+	vec4 wLightPos;
 };
 
-struct Scene {
-	std::vector<Intersectable*> objects;
-	std::vector<Light*> lights;
-	Camera camera;
-
-	void build() {
-		vec3 eye = vec3(0, 0, 2), vup = vec3(0, 1, 0), lookat = vec3(0, 0, 0);
-		float fov = 45 * M_PI / 180;
-		camera.set(eye, lookat, vup, fov);
-
-		Cube cube = Cube(vec3(0.0f, 0.0f, 0.0f), 1.0f);
-		cube.rotateY(40.0f);
-		objects = cube.create(objects);
-		
-		Icosahedron i1 = Icosahedron(vec3(0.3f, -0.3f, 0.2f), 0.2f);
-		objects = i1.create(objects);
-		Octahedron o1 = Octahedron(vec3(-0.3f, -0.3f, 0.0f), 0.2f);
-		objects = o1.create(objects);
-	}
-
-	void render(std::vector<vec4>& image) {
-		for (int Y = 0; Y < windowHeight; Y++) {
-			for (int X = 0; X < windowWidth; X++) {
-				vec3 color = trace(camera.getRay(X, Y));
-				image[Y * windowWidth + X] = vec4(color.x, color.y, color.z, 1);
-			}
-		}
-	}
-
-	void clear() {
-		objects.clear();
-		lights.clear();
-	}
-
-	Hit firstIntersect(Ray ray) {
-		Hit bestHit;
-		for (Intersectable* object : objects) {
-			Hit hit = object->intersect(ray);
-			if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t))  bestHit = hit;
-		}
-		if (dot(ray.dir, bestHit.normal) > 0) bestHit.normal = bestHit.normal * (-1);
-		return bestHit;
-	}
-
-	vec3 trace(Ray ray) {
-		Hit hit = firstIntersect(ray);
-		if (hit.t < 0) return vec3();
-		vec3 outRad = vec3(1.0f, 1.0f, 1.0f) * 0.2f * (1 + dot(hit.normal, -ray.dir));
-		for (auto light : lights) {
-			Hit shadowHit = firstIntersect(Ray(hit.position + hit.normal * epsilon, normalize(light->position - hit.position)));
-			if (shadowHit.t < epsilon || shadowHit.t > length(light->position - hit.position)) {
-				outRad = outRad + light->radianceAt(hit.position);
-			}
-		}
-		return outRad;
-	}
+//---------------------------
+struct RenderState {
+	//---------------------------
+	mat4	           MVP, M, Minv, V, P;
+	Material* material;
+	std::vector<Light> lights;
+	Texture* texture;
+	vec3	           wEye;
 };
 
-class FullScreenTexturedQuad {
-	unsigned int vao;
-	Texture texture;
+//---------------------------
+class Shader : public GPUProgram {
+	//---------------------------
 public:
-	FullScreenTexturedQuad(int windowWidth, int windowHeight, std::vector<vec4>& image)
-		: texture(windowWidth, windowHeight, image)
-	{
+	virtual void Bind(RenderState state) = 0;
+
+	void setUniformMaterial(const Material* material, const std::string& name) {
+		if (material != NULL) {
+			setUniform(material->kd, name + ".kd");
+			setUniform(material->ks, name + ".ks");
+			setUniform(material->ka, name + ".ka");
+			setUniform(material->shininess, name + ".shininess");
+			setUniform(material->emission, name + ".emission");
+		}
+		else {
+			setUniform(vec3(0, 0, 0), name + ".kd");
+			setUniform(vec3(0, 0, 0), name + ".ks");
+			setUniform(vec3(1, 1, 1), name + ".ka");
+			setUniform(0, name + ".shininess");
+			setUniform(0, name + ".emission");
+		}
+	}
+
+	void setUniformLight(const Light& light, const std::string& name) {
+		setUniform(light.La, name + ".La");
+		setUniform(light.Le, name + ".Le");
+		setUniform(light.wLightPos, name + ".wLightPos");
+	}
+};
+
+//---------------------------
+class VolumetricShader : public Shader {
+	//---------------------------
+	const char* vertexSource = R"(
+		#version 330
+		precision highp float;
+
+		uniform mat4 MVP;								 // MVP
+		layout(location = 0) in vec3  vtxPos;            // pos in modeling space
+		layout(location = 2) in vec2  vtxUV;
+		layout(location = 3) in vec4  vtxColor;      	 // modulation color
+		out vec4 modulation;
+		out vec2 texcoord;
+
+		void main() {
+			gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
+		    modulation = vtxColor;
+		    texcoord = vtxUV;
+		}
+	)";
+
+	const char* fragmentSource = R"(
+		#version 330
+		precision highp float;
+
+		uniform sampler2D textureMap;
+		in vec4 modulation;
+		in vec2 texcoord;	
+        out vec4 fragmentColor; // output goes to frame buffer
+
+		void main() {
+			fragmentColor = texture(textureMap, texcoord) * modulation;
+		}
+	)";
+public:
+	VolumetricShader() { create(vertexSource, fragmentSource, "fragmentColor"); }
+
+	void Bind(RenderState state) {
+		Use(); 		// make this program run
+		setUniform(state.MVP, "MVP");
+		setUniform(*state.texture, "textureMap");
+	}
+};
+
+//---------------------------
+class SurfaceShader : public Shader {
+	//---------------------------
+	const char* vertexSource = R"(
+		#version 330
+		precision highp float;
+
+		struct Light {
+			vec3 La, Le;
+			vec4 wLightPos;
+		};
+
+		uniform mat4  MVP, M, Minv; // MVP, Model, Model-inverse
+		uniform Light[8] lights;    // light sources 
+		uniform int   nLights;
+		uniform vec3  wEye;         // pos of eye
+		layout(location = 0) in vec3  vtxPos;            // pos in modeling space
+		layout(location = 1) in vec3  vtxNorm;      	 // normal in modeling space
+		layout(location = 2) in vec2  vtxUV;
+		out vec3 wNormal;		    // normal in world space
+		out vec3 wView;             // view in world space
+		out vec3 wLight[8];		    // light dir in world space
+		out vec2 texcoord;
+
+		void main() {
+			gl_Position = vec4(vtxPos, 1) * MVP; // to NDC
+			vec4 wPos = vec4(vtxPos, 1) * M;
+			for(int i = 0; i < nLights; i++) wLight[i] = lights[i].wLightPos.xyz * wPos.w - wPos.xyz * lights[i].wLightPos.w;
+		    wView  = wEye * wPos.w - wPos.xyz;
+		    wNormal = (Minv * vec4(vtxNorm, 0)).xyz;
+		    texcoord = vtxUV;
+		}
+	)";
+
+	const char* fragmentSource = R"(
+		#version 330
+		precision highp float;
+
+		struct Light {
+			vec3 La, Le;
+			vec4 wLightPos;
+		};
+
+		struct Material {
+			vec3 kd, ks, ka;
+			float shininess, emission;
+		};
+
+		uniform Material material;
+		uniform Light[8] lights;    // light sources 
+		uniform int   nLights;
+		uniform sampler2D diffuseTexture;
+		in  vec3 wNormal;       // interpolated world sp normal
+		in  vec3 wView;         // interpolated world sp view
+		in  vec3 wLight[8];     // interpolated world sp illum dir
+		in  vec2 texcoord;
+        out vec4 fragmentColor; // output goes to frame buffer
+
+		void main() {
+			vec3 N = normalize(wNormal);
+			vec3 V = normalize(wView); 
+			if (dot(N, V) < 0) N = -N;	// prepare for one-sided surfaces 
+			vec3 texColor = texture(diffuseTexture, texcoord).rgb;
+			vec3 ka = material.ka * texColor;
+			vec3 kd = material.kd * texColor;
+
+			vec3 radiance = texColor * material.emission;
+			for(int i = 0; i < nLights; i++) {
+				vec3 L = normalize(wLight[i]);
+				vec3 H = normalize(L + V);
+				float cost = max(dot(N, L), 0), cosd = max(dot(N, H), 0);
+				// kd and ka are modulated by the texture
+				radiance += ka * lights[i].La + (kd * cost + material.ks * pow(cosd, material.shininess)) * lights[i].Le;
+			}
+			fragmentColor = vec4(radiance, 1);
+		}
+	)";
+public:
+	SurfaceShader() {
+		create(vertexSource, fragmentSource, "fragmentColor");
+	}
+
+	void Bind(RenderState state) {
+		Use(); 		// make this program run
+		setUniform(state.MVP, "MVP");
+		setUniform(state.M, "M");
+		setUniform(state.Minv, "Minv");
+		setUniform(state.wEye, "wEye");
+		setUniform(*state.texture, std::string("diffuseTexture"));
+		setUniformMaterial(state.material, "material");
+
+		setUniform((int)state.lights.size(), "nLights");
+		for (unsigned int i = 0; i < state.lights.size(); i++) {
+			setUniformLight(state.lights[i], std::string("lights[") + std::to_string(i) + std::string("]"));
+		}
+	}
+};
+
+//---------------------------
+struct VertexData {
+	//---------------------------
+	vec3 position, normal;
+	vec2 texcoord;
+	vec4 color;
+};
+
+//---------------------------
+struct Geometry {
+	//---------------------------
+	unsigned int vao, vbo;
+	Geometry() {
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-
-		unsigned int vbo;
-		glGenBuffers(1, &vbo);
-
+		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		float vertexCoords[] = { -1, -1,  1, -1,  1, 1,  -1, 1 };
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertexCoords), vertexCoords, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 	}
-
-	void Draw() {
-		glBindVertexArray(vao);
-		gpuProgram.setUniform(texture, "textureUnit");
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	virtual void Draw() = 0;
+	~Geometry() {
+		glDeleteBuffers(1, &vbo);
+		glDeleteVertexArrays(1, &vao);
 	}
 };
 
-Scene scene;
-FullScreenTexturedQuad* fullScreenTexturedQuad;
-std::vector<vec4> image(windowWidth * windowHeight);
-std::vector<vec3> conePositions, coneNormals;
+//---------------------------
+struct TriangleMesh : public Geometry {
+	//---------------------------
+	std::vector<VertexData> mesh;
 
-void onInitialization() {
-	glViewport(0, 0, windowWidth, windowHeight);
+	void create() {
+		glBufferData(GL_ARRAY_BUFFER, mesh.size() * sizeof(VertexData), &mesh[0], GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
+		glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
+		glEnableVertexAttribArray(2);  // attribute array 2 = TEXCOORD0
+		glEnableVertexAttribArray(3);  // attribute array 3 = COLOR
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, position));
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, normal));
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, texcoord));
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, color));
+	}
+	void Draw() {
+		glBindVertexArray(vao);
+		glDrawArrays(GL_TRIANGLES, 0, mesh.size());
+	}
+};
 
-	conePositions.push_back(vec3(0.3f, 0.5f, 0.3f));
-	coneNormals.push_back(vec3(0.0f, -1.0f, 0.0f));
-	conePositions.push_back(vec3(-0.3f, 0.5f, 0.3f));
-	coneNormals.push_back(vec3(0.0f, -1.0f, 0.0f));
-	conePositions.push_back(vec3(0.0f, 0.5f, -0.3f));
-	coneNormals.push_back(vec3(0.0f, -1.0f, 0.0f));
-	scene.objects.push_back(new Cone(conePositions[0], 0.1f, coneNormals[0], 25.0f));
-	scene.lights.push_back(new Light(conePositions[0] + coneNormals[0] * 0.01f, vec3(1.0f, 0.0f, 0.0f)));
-	scene.objects.push_back(new Cone(conePositions[1], 0.1f, coneNormals[1], 25.0f));
-	scene.lights.push_back(new Light(conePositions[1] + coneNormals[1] * 0.01f, vec3(0.0f, 1.0f, 0.0f)));
-	scene.objects.push_back(new Cone(conePositions[2], 0.1f, coneNormals[2], 25.0f));
-	scene.lights.push_back(new Light(conePositions[2] + coneNormals[2] * 0.01f, vec3(0.0f, 0.0f, 1.0f)));
+//---------------------------
+struct Quad : public TriangleMesh {
+	//---------------------------
+	Quad() {
+		VertexData vd1, vd2, vd3, vd4;
+		vd1.normal = vd2.normal = vd3.normal = vd4.normal = vec3(0, 0, 1);
+		vd1.color = vd2.color = vd3.color = vd4.color = vec4(1, 1, 1, 1);
+		vd1.texcoord = vec2(0, 0); vd2.texcoord = vec2(1, 0);
+		vd3.texcoord = vec2(1, 1); vd4.texcoord = vec2(0, 1);
+		vd1.position = vec3(-1, -1, 0); vd2.position = vec3(1, -1, 0);
+		vd3.position = vec3(1, 1, 0);   vd4.position = vec3(-1, 1, 0);
+		mesh.push_back(vd1); mesh.push_back(vd2); mesh.push_back(vd3);
+		mesh.push_back(vd1); mesh.push_back(vd3); mesh.push_back(vd4);
+		create();
+	}
+};
 
-	scene.build();
-	scene.render(image);
-	fullScreenTexturedQuad = new FullScreenTexturedQuad(windowWidth, windowHeight, image);
-	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
-}
+//---------------------------
+struct BoxSurface : public TriangleMesh {
+	//---------------------------
+	void PushQuad(VertexData vd[4]) {
+		mesh.push_back(vd[0]); mesh.push_back(vd[1]); mesh.push_back(vd[2]);
+		mesh.push_back(vd[0]); mesh.push_back(vd[2]); mesh.push_back(vd[3]);
+	}
+	BoxSurface(float s) {
+		vec3 p1(-s, -s, -s), p2(s, -s, -s), p3(s, s, -s), p4(-s, s, -s),
+			p5(-s, -s, s), p6(s, -s, s), p7(s, s, s), p8(-s, s, s);
+		VertexData vd[4];
+		vd[0].texcoord = vec2(0, 0); vd[1].texcoord = vec2(1, 0); vd[2].texcoord = vec2(1, 1); vd[2].texcoord = vec2(0, 1);
+		vd[0].color = vd[1].color = vd[2].color = vd[3].color = vec4(0, 0, 1, 1);
+		vd[0].normal = vd[1].normal = vd[2].normal = vd[3].normal = vec3(0, 0, 1);
+		vd[0].position = p1; vd[1].position = p2; vd[2].position = p3; vd[3].position = p4; PushQuad(vd);
+		vd[0].normal = vd[1].normal = vd[2].normal = vd[3].normal = vec3(0, 0, -1);
+		vd[0].position = p5; vd[1].position = p6; vd[2].position = p7; vd[3].position = p8; PushQuad(vd);
+		vd[0].color = vd[1].color = vd[2].color = vd[3].color = vec4(0, 1, 0, 1);
+		vd[0].normal = vd[1].normal = vd[2].normal = vd[3].normal = vec3(0, 1, 0);
+		vd[0].position = p1; vd[1].position = p2; vd[2].position = p6; vd[3].position = p5; PushQuad(vd);
+		vd[0].normal = vd[1].normal = vd[2].normal = vd[3].normal = vec3(0, -1, 0);
+		vd[0].position = p3; vd[1].position = p4; vd[2].position = p8; vd[3].position = p7; PushQuad(vd);
+		vd[0].color = vd[1].color = vd[2].color = vd[3].color = vec4(1, 0, 0, 1);
+		vd[0].normal = vd[1].normal = vd[2].normal = vd[3].normal = vec3(1, 0, 0);
+		vd[0].position = p1; vd[1].position = p4; vd[2].position = p8; vd[3].position = p5; PushQuad(vd);
+		vd[0].normal = vd[1].normal = vd[2].normal = vd[3].normal = vec3(-1, 0, 0);
+		vd[0].position = p2; vd[1].position = p3; vd[2].position = p7; vd[3].position = p6; PushQuad(vd);
+		create();
+	}
+};
 
-void onDisplay() {
-	fullScreenTexturedQuad->Draw();
+//---------------------------
+class ParamSurface : public Geometry {
+	//---------------------------
+	unsigned int nVtxPerStrip, nStrips;
+public:
+	ParamSurface() { nVtxPerStrip = nStrips = 0; }
+	virtual VertexData GenVertexData(float u, float v) = 0;
+
+	void create(int N = 40, int M = 40) {
+		nVtxPerStrip = (M + 1) * 2;
+		nStrips = N;
+		std::vector<VertexData> vtxData;	// vertices on the CPU
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j <= M; j++) {
+				vtxData.push_back(GenVertexData((float)j / M, (float)i / N));
+				vtxData.push_back(GenVertexData((float)j / M, (float)(i + 1) / N));
+			}
+		}
+		glBufferData(GL_ARRAY_BUFFER, nVtxPerStrip * nStrips * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
+		glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
+		glEnableVertexAttribArray(2);  // attribute array 2 = TEXCOORD0
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, position));
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, normal));
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, texcoord));
+	}
+	void Draw() {
+		glBindVertexArray(vao);
+		for (unsigned int i = 0; i < nStrips; i++)
+			glDrawArrays(GL_TRIANGLE_STRIP, i * nVtxPerStrip, nVtxPerStrip);
+	}
+};
+
+//---------------------------
+class Sphere : public ParamSurface {
+	//---------------------------
+public:
+	Sphere() { create(); }
+	VertexData GenVertexData(float u, float v) {
+		VertexData vd;
+		vd.position = vd.normal = vec3(cosf(u * 2.0f * (float)M_PI) * sinf(v * (float)M_PI),
+			sinf(u * 2.0f * (float)M_PI) * sinf(v * (float)M_PI),
+			cosf(v * (float)M_PI));
+		vd.texcoord = vec2(u, v);
+		return vd;
+	}
+};
+
+//---------------------------
+struct Ray {
+	//---------------------------
+	vec3 start, dir;
+	Ray(vec3 _start, vec3 _dir) { start = _start; dir = _dir; }
+};
+
+//---------------------------
+struct GameObject {
+	//---------------------------
+	virtual Shader* getShader() { return NULL; }
+	virtual Material* getMaterial() { return NULL; }
+	virtual Texture* getTexture() { return NULL; }
+	virtual Geometry* getGeometry() { return NULL; }
+
+	vec3   position, velocity, acceleration;
+	bool   alive;
+	float  boundingRadius;
+
+	GameObject() : position(0, 0, 0), velocity(0, 0, 0), acceleration(0, 0, 0) {
+		alive = true;
+		boundingRadius = 0;
+	}
+	virtual void Control(float tstart, float tend) { }      // control
+	virtual void Animate(float tstart, float tend) {        // state change
+		float dt = tend - tstart;
+		position = position + velocity * dt;          // Euler integration
+		velocity = velocity + acceleration * dt;
+	}
+	virtual void SetModelingTransformation(RenderState& state) {
+		state.M = TranslateMatrix(position);
+		state.Minv = TranslateMatrix(-position);
+	}
+	virtual void Draw(RenderState state) {
+		if (!getShader()) return;
+		SetModelingTransformation(state);
+		state.MVP = state.M * state.V * state.P;
+		state.material = getMaterial();
+		state.texture = getTexture();
+		getShader()->Bind(state);
+		getGeometry()->Draw();
+	}
+	virtual void Interact(GameObject* obj) { }
+	virtual bool Collide(GameObject* obj, float& hit_time, vec3& hit_point) {
+		float radius = boundingRadius + obj->boundingRadius;
+		Ray ray(position, velocity - obj->velocity);
+		float this_hit_time = obj->Intersect(ray, radius);
+		if (this_hit_time > 0 && this_hit_time < hit_time) {
+			hit_time = this_hit_time;
+			vec3 hit_pos = position + velocity * hit_time;
+			vec3 obj_hit_pos = obj->position + obj->velocity * hit_time;
+			float a = boundingRadius / (boundingRadius + obj->boundingRadius);
+			hit_point = hit_pos * (1 - a) + obj_hit_pos * a;
+			return true;
+		}
+		else return false;
+	}
+	float Intersect(const Ray& ray, float radius) { // ray - sphere intersection
+		if (radius == 0) return false;
+		vec3 dist = ray.start - position;
+		float a = dot(ray.dir, ray.dir), b = dot(dist, ray.dir) * 2.0f, c = dot(dist, dist) - radius * radius;
+		float discr = b * b - 4.0f * a * c;
+		if (discr < 0) return false;
+		float sqrt_discr = (float)sqrt(discr);
+		float t1 = (-b + sqrt_discr) / 2.0f / a;	// larger
+		float t2 = (-b - sqrt_discr) / 2.0f / a;	// smaller
+		if (t2 > 0) return t2;
+		if (t1 > 0) return t1;
+		return -1;
+	}
+	virtual void Kill() { alive = false; }
+};
+
+//--------------------------------------------
+struct Input {
+	//--------------------------------------------
+	bool    glutKeyTable[256]; // key table
+	Input() { for (int i = 0; i < 256; i++) glutKeyTable[i] = false; }
+	bool GetKeyStatus(int keyCode) { return glutKeyTable[keyCode]; }
+};
+
+extern Input input;
+
+//--------------------------------------------
+struct Avatar : public GameObject {
+	//--------------------------------------------
+	vec3  wVup;   // extinsic
+	float fov, asp, fp, bp;		// intrinsic
+
+	Avatar(vec3& pos) {
+		position = pos;
+		wVup = vec3(0, 0, 1);
+		asp = (float)windowWidth / windowHeight;
+		fov = 75.0f * (float)M_PI / 180.0f;
+		fp = 0.1f; bp = 1000.0f;
+	}
+	virtual void ProcessInput() = 0;
+
+	mat4 V() { // view matrix: translates the center to the origin
+		vec3 w = normalize(-velocity);
+		vec3 u = normalize(cross(wVup, w));
+		vec3 v = cross(w, u);
+		return TranslateMatrix(-position) * mat4(u.x, v.x, w.x, 0,
+			u.y, v.y, w.y, 0,
+			u.z, v.z, w.z, 0,
+			0, 0, 0, 1);
+	}
+	mat4 P() { // projection matrix
+		return mat4(1 / (tan(fov / 2) * asp), 0, 0, 0,
+			0, 1 / tan(fov / 2), 0, 0,
+			0, 0, -(fp + bp) / (bp - fp), -1,
+			0, 0, -2 * fp * bp / (bp - fp), 0);
+	}
+};
+
+//---------------------------
+class Scene {
+	//---------------------------
+	int current = 0;
+	std::vector<GameObject*> objects[2]; // ping-pong
+	std::vector<Light>        lights;
+public:
+	Avatar* avatar;
+
+	void Build();
+
+	void Render() {
+		RenderState state;
+		state.wEye = avatar->position;
+		state.V = avatar->V();
+		state.P = avatar->P();
+		state.lights = lights;
+		// First pass: opaque objects
+		for (auto* obj : objects[current]) if (dynamic_cast<SurfaceShader*>(obj->getShader())) obj->Draw(state);
+
+		// Second pass: transparent objects
+		glEnable(GL_BLEND);
+		glDepthMask(GL_FALSE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glEnable(GL_ALPHA_TEST);			// only non-zero alpha
+		glAlphaFunc(GL_GREATER, 0);
+		for (auto* obj : objects[current]) if (dynamic_cast<VolumetricShader*>(obj->getShader())) obj->Draw(state);
+		glDepthMask(GL_TRUE);
+		glDisable(GL_BLEND);
+	}
+
+	void Simulate(float tstart, float tend) {
+		avatar->ProcessInput();
+		const float dt = 0.1f; // dt is ”infinitesimal”
+		for (float t = tstart; t < tend; t += dt) {
+			float Dt = fmin(dt, tend - t);
+			for (auto* obj : objects[current]) obj->Control(tstart, tend); // control
+			for (auto* obj : objects[current]) {
+				if (obj->alive) Join(obj);
+				else            delete obj; // bury dead
+			}
+			objects[current].clear();
+			current = !current;
+			for (auto* obj : objects[current]) obj->Animate(tstart, tend); // animate
+		}
+		Render();
+	}
+
+	void Interact(GameObject* object) {
+		for (auto* obj : objects[current]) object->Interact(obj);
+	}
+
+	GameObject* Collide(GameObject* object, float& hit_time, vec3& hit_point) {
+		GameObject* hit_object = NULL;
+		for (auto* obj : objects[current]) {
+			if (obj == object) continue;
+			if (obj->Collide(object, hit_time, hit_point)) hit_object = obj;
+		}
+		return hit_object;
+	}
+	void Join(GameObject* obj) { objects[!current].push_back(obj); }
+};
+
+extern Scene* scene;
+
+//--------------------------------------------
+class BillBoard : public GameObject {
+	//--------------------------------------------
+protected:
+	float size;
+public:
+	static Shader* shader;
+	static Geometry* geometry;
+
+	BillBoard(vec3& _position, float size0) {
+		position = _position;
+		size = size0;
+	}
+	Shader* getShader() { return shader; }
+	Geometry* getGeometry() { return geometry; }
+
+	void SetModelingTransformation(RenderState& state) {
+		vec3 w = state.wEye - position;
+		vec3 left = cross(vec3(0, 0, 1), w);
+		vec3 up = cross(w, left);
+		left = normalize(left) * size;
+		up = normalize(up) * size;
+		state.M = mat4(left.x, left.y, left.z, 0,
+			up.x, up.y, up.z, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1) * TranslateMatrix(position);
+	}
+};
+
+//--------------------------------------------
+struct Particle {
+	//--------------------------------------------
+	vec3	position, velocity, acceleration;
+	float   weight, dweight, size, dsize, time_to_live;
+	vec4    color, dcolor;
+
+	Particle() { weight = 1; }
+
+	void Animate(float dt, vec3& force) {
+		time_to_live -= dt;
+		if (time_to_live <= 0) return;
+		acceleration = force * (1 / weight);
+		velocity = velocity + acceleration * dt;
+		position = position + velocity * dt;
+		weight += dweight * dt;
+		size += dsize * dt;
+		color += dcolor * dt;
+		if (color.w <= 0) time_to_live = 0;
+	}
+};
+
+//--------------------------------------------
+class ParticleSystem : public GameObject {
+	//--------------------------------------------
+protected:
+	unsigned int vao, vbo;
+	std::vector<Particle*> particles;
+	float				   age;
+	vec3				   force;
+public:
+	static Shader* shader;
+	static Texture* texture;
+
+	ParticleSystem(vec3& pos0) {
+		position = pos0; age = 0.0; alive = true;
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
+		glEnableVertexAttribArray(2);  // attribute array 2 = TEXCOORD0
+		glEnableVertexAttribArray(3);  // attribute array 3 = COLOR
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, position));
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, texcoord));
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)offsetof(VertexData, color));
+	}
+	Shader* getShader() { return shader; }
+	Texture* getTexture() { return texture; }
+
+	void  Control(float tstart, float tend) {
+		alive = false;
+		for (auto particle : particles) {
+			if (particle->time_to_live > 0) {
+				alive = true;
+				return;
+			}
+		}
+	}
+
+	void  Animate(float tstart, float tend) {
+		float dt = tend - tstart;
+		for (auto particle : particles) particle->Animate(dt, force);
+	}
+
+	void AddParticle(Particle* particle) { particles.push_back(particle); }
+
+	void Draw(RenderState state) {
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		std::vector<VertexData> mesh;
+		VertexData vd1, vd2, vd3, vd4;
+		vd1.normal = vd2.normal = vd3.normal = vd4.normal = vec3(0, 0, 1);
+		vd1.texcoord = vec2(0, 0); vd2.texcoord = vec2(1, 0);
+		vd3.texcoord = vec2(1, 1); vd4.texcoord = vec2(0, 1);
+
+		for (auto particle : particles) {
+			vec3 p = position + particle->position;
+			vec3 w = state.wEye - p;
+			vec3 left = cross(vec3(0, 0, 1), w);
+			vec3 up = cross(w, left);
+			left = normalize(left) * particle->size;
+			up = normalize(up) * particle->size;
+			vd1.color = vd2.color = vd3.color = vd4.color = particle->color;
+			vd1.position = p - left - up;
+			vd2.position = p + left - up;
+			vd3.position = p + left + up;
+			vd4.position = p - left + up;
+			mesh.push_back(vd1); mesh.push_back(vd2); mesh.push_back(vd3);
+			mesh.push_back(vd1); mesh.push_back(vd3); mesh.push_back(vd4);
+		}
+		glBufferData(GL_ARRAY_BUFFER, mesh.size() * sizeof(VertexData), &mesh[0], GL_DYNAMIC_DRAW);
+		state.MVP = state.V * state.P;
+		state.texture = texture;
+		shader->Bind(state);
+		glDrawArrays(GL_TRIANGLES, 0, mesh.size());
+	}
+	~ParticleSystem() {
+		glDeleteBuffers(1, &vbo);
+		glDeleteVertexArrays(1, &vao);
+		for (auto particle : particles) delete particle;
+	}
+};
+
+Input input;
+const float GAME_SPEED = 1000.0f;
+
+//-----------------------------------------------------------------
+void onDisplay(void) {
+	//-----------------------------------------------------------------
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	scene->Render();
 	glutSwapBuffers();
 }
 
-void onMouse(int button, int state, int pX, int pY) {
-	vec3 cP = scene.firstIntersect(scene.camera.getRay(pX, windowHeight - pY)).position;
-	vec3 cN = scene.firstIntersect(scene.camera.getRay(pX, windowHeight - pY)).normal;
-	vec3 color = scene.trace(scene.camera.getRay(pX, windowHeight - pY));
-
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		if (fabs(length(cN) - 1) < epsilon) {
-			scene.clear();
-			float minLength = 1000.0f;
-			int minIndex = -1;
-			for (int i = 0; i < 3; i++) {
-				if (length(cP - conePositions[i]) < minLength) {
-					minLength = length(cP - conePositions[i]);
-					minIndex = i;
-				}
-			}
-			conePositions[minIndex] = cP;
-			coneNormals[minIndex] = cN;
-			for (int i = 0; i < 3; i++) {
-				scene.objects.push_back(new Cone(conePositions[i], 0.1f, coneNormals[i], 25.0f));
-				scene.lights.push_back(new Light(conePositions[i] + coneNormals[i] * 0.01f,
-					vec3(i == 0 ? 0.9f : 0.1f, i == 1 ? 0.9f : 0.1f, i == 2 ? 0.9f : 0.1f)));
-			}
-			scene.build();
-			scene.render(image);
-			fullScreenTexturedQuad = new FullScreenTexturedQuad(windowWidth, windowHeight, image);
-			glutPostRedisplay();
-		}
-	}
+//-----------------------------------------------------------------
+void onIdle(void) {
+	//-----------------------------------------------------------------
+	static float tend = 0;
+	float tstart = tend;
+	tend = glutGet(GLUT_ELAPSED_TIME) / GAME_SPEED;
+	scene->Simulate(tstart, tend);
+	glutPostRedisplay();
 }
 
-void onKeyboard(unsigned char key, int pX, int pY) {
+//-----------------------------------------------------------------
+void onKeyboard(unsigned char key, int x, int y) { // ascii chars
+	//-----------------------------------------------------------------
+	input.glutKeyTable[key] = true;
 }
 
-void onKeyboardUp(unsigned char key, int pX, int pY) {
+//-----------------------------------------------------------------
+void onKeyboardUp(unsigned char key, int x, int y) { // ascii chars
+	//-----------------------------------------------------------------
+	input.glutKeyTable[key] = false;
 }
 
+//-----------------------------------------------------------------
+void onSpecialKey(int key, int x, int y) { // not ascii chars
+	//-----------------------------------------------------------------
+	input.glutKeyTable[key] = true;
+}
+
+//-----------------------------------------------------------------
+void onSpecialKeyUp(int key, int x, int y) { // not ascii chars
+	//-----------------------------------------------------------------
+	input.glutKeyTable[key] = false;
+}
+
+Scene* scene;
+
+Geometry* BillBoard::geometry = NULL;
+Shader* BillBoard::shader = NULL;
+Shader* ParticleSystem::shader = NULL;
+Texture* ParticleSystem::texture = NULL;
+
+// Initialization, create an OpenGL context
+//-----------------------------------------------------------------
+void onInitialization() {
+	//-----------------------------------------------------------------
+	BillBoard::shader = ParticleSystem::shader = new VolumetricShader();
+	BillBoard::geometry = new Quad();
+	ParticleSystem::texture = new Texture("explosion.bmp", true);
+
+	glViewport(0, 0, windowWidth, windowHeight);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	scene = new Scene;
+	scene->Build();
+}
+
+// Move mouse with key pressed
 void onMouseMotion(int pX, int pY) {
 }
 
-void onIdle() {
+// Mouse click event
+void onMouse(int button, int state, int pX, int pY) {
+}
+
+// Entry point of the application
+int main(int argc, char* argv[]) {
+	// Initialize GLUT, Glew and OpenGL 
+	glutInit(&argc, argv);
+
+	// OpenGL major and minor versions
+	int majorVersion = 3, minorVersion = 3;
+#if !defined(__APPLE__)
+	glutInitContextVersion(majorVersion, minorVersion);
+#endif
+	glutInitWindowSize(windowWidth, windowHeight);				// Application window is initially of resolution 600x600
+	glutInitWindowPosition(100, 100);							// Relative location of the application window
+#if defined(__APPLE__)
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_3_2_CORE_PROFILE);  // 8 bit R,G,B,A + double buffer + depth buffer
+#else
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+#endif
+	glutCreateWindow(argv[0]);
+
+#if !defined(__APPLE__)
+	glewExperimental = true;	// magic
+	glewInit();
+#endif
+	printf("GL Vendor    : %s\n", glGetString(GL_VENDOR));
+	printf("GL Renderer  : %s\n", glGetString(GL_RENDERER));
+	printf("GL Version (string)  : %s\n", glGetString(GL_VERSION));
+	glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+	glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+	printf("GL Version (integer) : %d.%d\n", majorVersion, minorVersion);
+	printf("GLSL Version : %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+	// Initialize this program and create shaders
+	onInitialization();
+
+	glutDisplayFunc(onDisplay);                // Register event handlers
+	glutMouseFunc(onMouse);
+	glutIdleFunc(onIdle);
+	glutKeyboardFunc(onKeyboard);
+	glutKeyboardUpFunc(onKeyboardUp);
+	glutSpecialFunc(onSpecialKey);
+	glutSpecialUpFunc(onSpecialKeyUp);
+	glutMotionFunc(onMouseMotion);
+
+	glutMainLoop();
+	return 1;
 }
