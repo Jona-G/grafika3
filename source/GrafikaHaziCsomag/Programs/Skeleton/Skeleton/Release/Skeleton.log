@@ -2,28 +2,11 @@
 C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\framework.h(167,17): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
 C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(93,38): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
 C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(92,17): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(489,31): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(500,18): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(512,18): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(512,39): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(525,11): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(539,11): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(539,29): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(543,39): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(555,20): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(555,34): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(556,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(573,15): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(780,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(59,76): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(490,16): message : see reference to function template instantiation 'Dnum<vec2> Cosh<vec2>(Dnum<vec2>)' being compiled
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(59,65): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(58,76): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(60,52): message : see reference to function template instantiation 'Dnum<vec2> Sinh<vec2>(Dnum<vec2>)' being compiled
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(490,55): message : see reference to function template instantiation 'Dnum<vec2> Tanh<vec2>(Dnum<vec2>)' being compiled
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(58,65): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(299,18): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(299,39): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(435,49): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
   Generating code
-  0 of 415 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+  0 of 349 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
     0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
