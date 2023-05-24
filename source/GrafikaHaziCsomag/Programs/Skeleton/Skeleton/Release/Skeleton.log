@@ -1,26 +1,30 @@
 ﻿  Skeleton.cpp
 C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\framework.h(167,17): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(108,23): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(192,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(204,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(264,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(290,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(291,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(292,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(293,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(294,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(295,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(296,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(297,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(298,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(299,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(300,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(301,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(342,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(390,1): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(93,38): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(92,17): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(489,31): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(500,18): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(512,18): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(512,39): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(525,11): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(539,11): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(539,29): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(543,39): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(555,20): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(555,34): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(556,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(573,15): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(780,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(59,76): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(490,16): message : see reference to function template instantiation 'Dnum<vec2> Cosh<vec2>(Dnum<vec2>)' being compiled
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(59,65): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(58,76): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(60,52): message : see reference to function template instantiation 'Dnum<vec2> Sinh<vec2>(Dnum<vec2>)' being compiled
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(490,55): message : see reference to function template instantiation 'Dnum<vec2> Tanh<vec2>(Dnum<vec2>)' being compiled
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(58,65): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
   Generating code
-  1 of 342 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
+  0 of 415 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    2 functions had inline decision re-evaluated but remain unchanged
+    0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Skeleton.vcxproj -> C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\bin\Skeleton.exe
