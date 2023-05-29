@@ -1,12 +1,11 @@
 ﻿  Skeleton.cpp
 C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\framework.h(167,17): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(88,38): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(87,17): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(342,51): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(516,49): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(91,38): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(90,17): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(345,51): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(504,29): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
   Generating code
-  0 of 351 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  Previous IPDB and IOBJ mismatch, fall back to full compilation.
+  All 351 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Skeleton.vcxproj -> C:\Users\fuji\source\repos\grafika1\source\GrafikaHaziCsomag\Programs\Skeleton\bin\Skeleton.exe

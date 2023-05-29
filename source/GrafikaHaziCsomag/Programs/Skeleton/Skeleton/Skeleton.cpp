@@ -265,8 +265,8 @@ class ParamSurface : public Geometry {
 		vec3 position, normal;
 		vec2 texcoord;
 	};
-
 	unsigned int nVtxPerStrip, nStrips;
+
 public:
 	ParamSurface() { nVtxPerStrip = nStrips = 0; }
 
@@ -498,8 +498,11 @@ void onIdle() {
 	glutPostRedisplay();
 }
 
-void onKeyboard(unsigned char key, int pX, int pY) { 
-	animateStart = true; animateStartTime = glutGet(GLUT_ELAPSED_TIME);
+void onKeyboard(unsigned char key, int pX, int pY) {
+	if (!animateStart) {
+		animateStart = true;
+		animateStartTime = glutGet(GLUT_ELAPSED_TIME);
+	}
 }
 
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
